@@ -96,7 +96,7 @@ export const [FamilyProvider, useFamily] = createContextHook(() => {
               theme: 'space',
               length: 3,
             },
-            audioUrl: 'https://example.com/story1.m4a',
+            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
             durationSec: 180,
             createdBy: MOCK_USER_ID,
             createdAt: new Date(Date.now() - 86400000).toISOString(),
