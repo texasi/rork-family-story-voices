@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { X, Check, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import colors from '@/constants/colors';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { trpc } from '@/lib/trpc';
 
 const PRODUCTS = [
   {
@@ -51,9 +53,39 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  const baseUrl = useMemo(() => {
+    if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL ?? '';
+  }, []);
+
   const handlePurchase = async () => {
     if (Platform.OS === 'web') {
-      alert('In-app purchases are not available on web. Please use the iOS or Android app.');
+      setIsPurchasing(true);
+      try {
+        const successUrl = `${baseUrl}/`; // redirect back to home
+        const cancelUrl = `${baseUrl}/paywall`;
+        const priceMap: Record<string, string> = {
+          'fsv.family.yearly': 'price_yearly_placeholder',
+          'fsv.family.monthly': 'price_monthly_placeholder',
+        };
+        const priceId = priceMap[selectedProduct];
+        const res = await trpc.payments.createCheckoutSession.useMutation().mutateAsync({
+          mode: 'subscription',
+          priceId,
+          successUrl,
+          cancelUrl,
+        });
+        if (res.url) {
+          await Linking.openURL(res.url);
+        } else {
+          alert('Unable to start checkout.');
+        }
+      } catch (err) {
+        console.log('Stripe checkout error', err);
+        alert('Checkout failed.');
+      } finally {
+        setIsPurchasing(false);
+      }
       return;
     }
 
@@ -161,6 +193,7 @@ export default function PaywallScreen() {
           </View>
 
           <TouchableOpacity
+            testID="purchase-button"
             style={[styles.purchaseButton, isPurchasing && styles.purchaseButtonDisabled]}
             onPress={handlePurchase}
             disabled={isPurchasing}

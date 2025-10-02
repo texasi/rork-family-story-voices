@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
+  Alert,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Play, Pause, SkipBack, SkipForward, X, AlertCircle } from 'lucide-react-native';
-import { Audio } from 'expo-av';
+import { Audio as ExpoAudio } from 'expo-av';
 import colors from '@/constants/colors';
 import { useFamily } from '@/contexts/FamilyContext';
+
+const FALLBACK_AUDIO = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,11 +24,12 @@ export default function PlayerScreen() {
   const story = stories.find((s) => s.id === id);
   const voice = story ? getVoiceById(story.voiceId) : null;
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(story?.durationSec || 0);
-  const [showDisclosure, setShowDisclosure] = useState(true);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [position, setPosition] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(story?.durationSec || 0);
+  const [showDisclosure, setShowDisclosure] = useState<boolean>(true);
+  const [sound, setSound] = useState<ExpoAudio.Sound | null>(null);
+  const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const disclosureOpacity = useRef(new Animated.Value(1)).current;
@@ -71,9 +75,82 @@ export default function PlayerScreen() {
       : undefined;
   }, [sound]);
 
+  // Web audio element lifecycle
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!story) return;
+    const src = (story.audioUrl && story.audioUrl.length > 0) ? story.audioUrl : FALLBACK_AUDIO;
+    // Use web HTMLAudioElement, avoid name clash with expo-av Audio
+    const el = typeof window !== 'undefined' && typeof (window as any).Audio === 'function' ? new (window as any).Audio(src) as HTMLAudioElement : null;
+    if (!el) return;
+    el.onloadedmetadata = () => {
+      const d = isFinite(el.duration) ? el.duration : (story.durationSec ?? 0);
+      setDuration(typeof d === 'number' && d > 0 ? d : story.durationSec ?? 0);
+    };
+    el.onerror = () => {
+      Alert.alert('Playback Error', 'Could not load audio. Using fallback.');
+      el.src = FALLBACK_AUDIO;
+      el.load();
+    };
+    el.ontimeupdate = () => setPosition(el.currentTime);
+    el.onended = () => setIsPlaying(false);
+    htmlAudioRef.current = el;
+    return () => {
+      try {
+        el.pause();
+        el.src = '';
+        htmlAudioRef.current = null;
+      } catch {}
+    };
+  }, [story]);
+
+  const startNativePlayback = async (uri: string) => {
+    try {
+      const { sound: newSound } = await ExpoAudio.Sound.createAsync({ uri }, { shouldPlay: true });
+      setSound(newSound);
+      setIsPlaying(true);
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded) {
+          setPosition(status.positionMillis / 1000);
+          const d = status.durationMillis ? status.durationMillis / 1000 : duration;
+          setDuration(d);
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+            setPosition(0);
+          }
+        } else if (status.error) {
+          console.log('Playback status error', status.error);
+        }
+      });
+    } catch (err) {
+      console.error('Error playing audio:', err);
+      if (uri !== FALLBACK_AUDIO) {
+        await startNativePlayback(FALLBACK_AUDIO);
+      } else {
+        Alert.alert('Playback Error', 'Unable to play audio.');
+      }
+    }
+  };
+
   const handlePlayPause = async () => {
+    if (!story) return;
+    const uri = (story.audioUrl && story.audioUrl.length > 0) ? story.audioUrl : FALLBACK_AUDIO;
+
     if (Platform.OS === 'web') {
-      setIsPlaying(!isPlaying);
+      const el = htmlAudioRef.current;
+      if (!el) return;
+      try {
+        if (isPlaying) {
+          el.pause();
+          setIsPlaying(false);
+        } else {
+          await el.play();
+          setIsPlaying(true);
+        }
+      } catch (e) {
+        console.log('Web audio play error', e);
+        Alert.alert('Playback Error', 'Browser blocked autoplay. Tap again to play.');
+      }
       return;
     }
 
@@ -86,23 +163,7 @@ export default function PlayerScreen() {
         }
         setIsPlaying(!isPlaying);
       } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: story?.audioUrl || '' },
-          { shouldPlay: true }
-        );
-        setSound(newSound);
-        setIsPlaying(true);
-
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            setPosition(status.positionMillis / 1000);
-            setDuration(status.durationMillis ? status.durationMillis / 1000 : duration);
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-              setPosition(0);
-            }
-          }
-        });
+        await startNativePlayback(uri);
       }
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -110,7 +171,14 @@ export default function PlayerScreen() {
   };
 
   const handleSkipBack = async () => {
-    if (sound && Platform.OS !== 'web') {
+    if (Platform.OS === 'web') {
+      const el = htmlAudioRef.current;
+      if (!el) return;
+      el.currentTime = Math.max(0, el.currentTime - 15);
+      setPosition(el.currentTime);
+      return;
+    }
+    if (sound) {
       const newPosition = Math.max(0, position - 15);
       await sound.setPositionAsync(newPosition * 1000);
       setPosition(newPosition);
@@ -118,7 +186,14 @@ export default function PlayerScreen() {
   };
 
   const handleSkipForward = async () => {
-    if (sound && Platform.OS !== 'web') {
+    if (Platform.OS === 'web') {
+      const el = htmlAudioRef.current;
+      if (!el) return;
+      el.currentTime = Math.min(duration, el.currentTime + 15);
+      setPosition(el.currentTime);
+      return;
+    }
+    if (sound) {
       const newPosition = Math.min(duration, position + 15);
       await sound.setPositionAsync(newPosition * 1000);
       setPosition(newPosition);
@@ -126,8 +201,9 @@ export default function PlayerScreen() {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    const safe = Number.isFinite(seconds) ? seconds : 0;
+    const mins = Math.floor(safe / 60);
+    const secs = Math.floor(safe % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -201,7 +277,7 @@ export default function PlayerScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${(position / duration) * 100}%` },
+                  { width: `${duration > 0 ? (position / duration) * 100 : 0}%` },
                 ]}
               />
             </View>

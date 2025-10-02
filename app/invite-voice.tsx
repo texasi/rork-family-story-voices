@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
+
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Send } from 'lucide-react-native';
@@ -17,9 +19,9 @@ import { useFamily } from '@/contexts/FamilyContext';
 export default function InviteVoiceScreen() {
   const router = useRouter();
   const { family, addVoice } = useFamily();
-  const [displayName, setDisplayName] = useState('');
-  const [roleLabel, setRoleLabel] = useState('');
-  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState<string>('');
+  const [roleLabel, setRoleLabel] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
 
   const handleSendInvite = async () => {
     if (!displayName.trim() || !roleLabel.trim()) {
@@ -27,16 +29,28 @@ export default function InviteVoiceScreen() {
       return;
     }
 
-    const inviteLink = `familystoryvoices://consent?token=${Date.now()}&name=${encodeURIComponent(displayName)}`;
+    const webOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const inviteLink = `${webOrigin}/consent?token=${Date.now()}&name=${encodeURIComponent(displayName)}`;
 
     Alert.alert(
-      'Invite Sent!',
+      'Invite Created',
       `Send this link to ${displayName}:\n\n${inviteLink}\n\nThey will be able to record their consent and voice sample.`,
       [
         {
           text: 'Copy Link',
-          onPress: () => {
-            console.log('Copy link:', inviteLink);
+          onPress: async () => {
+            try {
+              if (Platform.OS === 'web' && navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(inviteLink);
+                Alert.alert('Copied', 'Invite link copied to clipboard');
+              } else {
+                console.log('Invite link:', inviteLink);
+                Alert.alert('Invite Link', inviteLink);
+              }
+            } catch (e) {
+              console.log('Clipboard failed', e);
+              Alert.alert('Copy Failed', 'Please copy the link manually:\n' + inviteLink);
+            }
           },
         },
         {
