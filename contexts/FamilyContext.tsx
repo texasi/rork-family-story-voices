@@ -83,25 +83,7 @@ export const [FamilyProvider, useFamily] = createContextHook(() => {
       if (storiesData) {
         setStories(JSON.parse(storiesData));
       } else {
-        const defaultStories: Story[] = [
-          {
-            id: 'story_1',
-            familyId: MOCK_FAMILY_ID,
-            templateId: 'goodnight_adventure',
-            voiceId: 'voice_1',
-            title: "Emma's Goodnight Adventure",
-            params: {
-              childName: 'Emma',
-              petName: 'Fluffy',
-              theme: 'space',
-              length: 3,
-            },
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-            durationSec: 180,
-            createdBy: MOCK_USER_ID,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-          },
-        ];
+        const defaultStories: Story[] = [];
         setStories(defaultStories);
         await AsyncStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(defaultStories));
       }

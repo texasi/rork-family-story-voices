@@ -106,28 +106,37 @@ export default function PlayerScreen() {
 
   const startNativePlayback = async (uri: string) => {
     try {
-      const { sound: newSound } = await ExpoAudio.Sound.createAsync({ uri }, { shouldPlay: true });
+      console.log('Attempting to play audio from:', uri);
+      await ExpoAudio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+      const { sound: newSound } = await ExpoAudio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true },
+        (status) => {
+          if (status.isLoaded) {
+            setPosition(status.positionMillis / 1000);
+            const d = status.durationMillis ? status.durationMillis / 1000 : duration;
+            setDuration(d);
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+              setPosition(0);
+            }
+          } else if (status.error) {
+            console.error('Playback status error:', status.error);
+          }
+        }
+      );
       setSound(newSound);
       setIsPlaying(true);
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          setPosition(status.positionMillis / 1000);
-          const d = status.durationMillis ? status.durationMillis / 1000 : duration;
-          setDuration(d);
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setPosition(0);
-          }
-        } else if (status.error) {
-          console.log('Playback status error', status.error);
-        }
-      });
     } catch (err) {
       console.error('Error playing audio:', err);
       if (uri !== FALLBACK_AUDIO) {
+        console.log('Trying fallback audio...');
         await startNativePlayback(FALLBACK_AUDIO);
       } else {
-        Alert.alert('Playback Error', 'Unable to play audio.');
+        Alert.alert('Playback Error', 'Unable to play audio. Please check your internet connection.');
       }
     }
   };
@@ -220,7 +229,42 @@ export default function PlayerScreen() {
             }}
           />
           <View style={styles.errorContainer}>
+            <AlertCircle size={48} color={colors.textSecondary} />
             <Text style={styles.errorText}>Story not found</Text>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (!story.audioUrl || story.audioUrl.length === 0) {
+    return (
+      <View style={styles.background}>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              title: story.title,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+            }}
+          />
+          <View style={styles.errorContainer}>
+            <AlertCircle size={48} color={colors.textSecondary} />
+            <Text style={styles.errorText}>Audio not available</Text>
+            <Text style={styles.errorSubtext}>This story has not been generated yet</Text>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </View>
@@ -343,6 +387,25 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     color: colors.textSecondary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  backButton: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '600' as const,
   },
   disclosureBanner: {
     flexDirection: 'row',
