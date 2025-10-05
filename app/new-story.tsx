@@ -62,7 +62,7 @@ export default function NewStoryScreen() {
           theme: selectedTheme,
           length,
         },
-        audioUrl: 'https://example.com/story.m4a',
+        audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav',
         durationSec: length * 60,
         createdBy: 'user_1',
         createdAt: new Date().toISOString(),
@@ -297,6 +297,7 @@ export default function NewStoryScreen() {
               </View>
 
               <TouchableOpacity
+                testID="generate-story-button"
                 style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
                 onPress={handleGenerate}
                 disabled={isGenerating}

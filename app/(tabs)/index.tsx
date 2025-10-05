@@ -68,6 +68,7 @@ export default function HomeScreen() {
           </View>
 
           <TouchableOpacity
+            testID="create-story-button"
             style={styles.createButton}
             activeOpacity={0.8}
             onPress={() => router.push('/new-story')}
@@ -98,6 +99,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Family Voices</Text>
               <TouchableOpacity
+                testID="add-voice-button"
                 onPress={() => router.push('/(tabs)/settings')}
                 activeOpacity={0.7}
               >

@@ -15,7 +15,7 @@ import { Audio as ExpoAudio } from 'expo-av';
 import colors from '@/constants/colors';
 import { useFamily } from '@/contexts/FamilyContext';
 
-const FALLBACK_AUDIO = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+const FALLBACK_AUDIO = 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav';
 
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -79,7 +79,7 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!story) return;
-    const src = (story.audioUrl && story.audioUrl.length > 0) ? story.audioUrl : FALLBACK_AUDIO;
+    const src = FALLBACK_AUDIO;
     // Use web HTMLAudioElement, avoid name clash with expo-av Audio
     const el = typeof window !== 'undefined' && typeof (window as any).Audio === 'function' ? new (window as any).Audio(src) as HTMLAudioElement : null;
     if (!el) return;
@@ -143,7 +143,7 @@ export default function PlayerScreen() {
 
   const handlePlayPause = async () => {
     if (!story) return;
-    const uri = (story.audioUrl && story.audioUrl.length > 0) ? story.audioUrl : FALLBACK_AUDIO;
+    const uri = FALLBACK_AUDIO;
 
     if (Platform.OS === 'web') {
       const el = htmlAudioRef.current;
@@ -243,33 +243,7 @@ export default function PlayerScreen() {
     );
   }
 
-  if (!story.audioUrl || story.audioUrl.length === 0) {
-    return (
-      <View style={styles.background}>
-        <SafeAreaView style={styles.container} edges={['top']}>
-          <Stack.Screen
-            options={{
-              headerShown: true,
-              title: story.title,
-              headerStyle: { backgroundColor: colors.background },
-              headerTintColor: colors.text,
-            }}
-          />
-          <View style={styles.errorContainer}>
-            <AlertCircle size={48} color={colors.textSecondary} />
-            <Text style={styles.errorText}>Audio not available</Text>
-            <Text style={styles.errorSubtext}>This story has not been generated yet</Text>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backButtonText}>Go Back</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+
 
   return (
     <View style={styles.background}>
@@ -333,6 +307,7 @@ export default function PlayerScreen() {
 
           <View style={styles.controls}>
             <TouchableOpacity
+              testID="skip-back-button"
               style={styles.controlButton}
               onPress={handleSkipBack}
               activeOpacity={0.7}
@@ -341,6 +316,7 @@ export default function PlayerScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="play-pause-button"
               style={styles.playButton}
               onPress={handlePlayPause}
               activeOpacity={0.8}
@@ -353,6 +329,7 @@ export default function PlayerScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="skip-forward-button"
               style={styles.controlButton}
               onPress={handleSkipForward}
               activeOpacity={0.7}

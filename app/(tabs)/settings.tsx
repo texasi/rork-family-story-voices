@@ -87,6 +87,7 @@ export default function SettingsScreen() {
               />
             ))}
             <TouchableOpacity
+              testID="invite-voice-button"
               style={styles.inviteButton}
               onPress={handleInviteVoice}
               activeOpacity={0.7}
@@ -128,6 +129,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             )}
             <TouchableOpacity
+              testID="sign-out-button"
               style={styles.signOutButton}
               onPress={signOut}
               activeOpacity={0.7}

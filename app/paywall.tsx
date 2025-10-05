@@ -15,7 +15,7 @@ import { X, Check, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import colors from '@/constants/colors';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { trpc } from '@/lib/trpc';
+import { trpcClient } from '@/lib/trpc';
 
 const PRODUCTS = [
   {
@@ -69,7 +69,7 @@ export default function PaywallScreen() {
           'fsv.family.monthly': 'price_monthly_placeholder',
         };
         const priceId = priceMap[selectedProduct];
-        const res = await trpc.payments.createCheckoutSession.useMutation().mutateAsync({
+        const res = await trpcClient.payments.createCheckoutSession.mutate({
           mode: 'subscription',
           priceId,
           successUrl,
