@@ -1,8 +1,13 @@
 import { z } from "zod";
 import { publicProcedure } from "@/backend/trpc/create-context";
+import { createClient } from "@supabase/supabase-js";
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export const generateAudioProcedure = publicProcedure
   .input(
@@ -54,12 +59,34 @@ export const generateAudioProcedure = publicProcedure
       }
 
       const audioBuffer = await response.arrayBuffer();
-      const base64Audio = Buffer.from(audioBuffer).toString("base64");
-      const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+      
+      const fileName = `story-${Date.now()}-${Math.random().toString(36).substring(7)}.mp3`;
+      const filePath = `audio/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('stories')
+        .upload(filePath, audioBuffer, {
+          contentType: 'audio/mpeg',
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        return {
+          success: false,
+          audioUrl: null,
+          error: 'Failed to upload audio',
+        };
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('stories')
+        .getPublicUrl(filePath);
 
       return {
         success: true,
-        audioUrl,
+        audioUrl: urlData.publicUrl,
         durationSec: 0,
       };
     } catch (error) {
