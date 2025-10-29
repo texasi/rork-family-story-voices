@@ -15,7 +15,7 @@ import { Audio as ExpoAudio } from 'expo-av';
 import colors from '@/constants/colors';
 import { useFamily } from '@/contexts/FamilyContext';
 
-const FALLBACK_AUDIO = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8a8e0c1fa.mp3';
+const FALLBACK_AUDIO = 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav';
 
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -109,22 +109,13 @@ export default function PlayerScreen() {
       console.log('Attempting to play audio from:', uri);
       
       if (!uri || uri.trim() === '') {
-        console.log('Audio URL is empty, using fallback');
-        await startNativePlayback(FALLBACK_AUDIO);
-        return;
-      }
-
-      if (sound) {
-        await sound.unloadAsync();
-        setSound(null);
+        throw new Error('Audio URL is empty');
       }
 
       await ExpoAudio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
       });
-      
-      console.log('Creating sound object...');
       const { sound: newSound } = await ExpoAudio.Sound.createAsync(
         { uri },
         { shouldPlay: true },
@@ -142,7 +133,6 @@ export default function PlayerScreen() {
           }
         }
       );
-      console.log('Sound created successfully');
       setSound(newSound);
       setIsPlaying(true);
     } catch (err: any) {
@@ -150,27 +140,25 @@ export default function PlayerScreen() {
       console.error('Audio URL:', uri);
       const errorMessage = err?.message || String(err);
       
-      if (uri !== FALLBACK_AUDIO && !uri.includes('pixabay')) {
+      if (uri !== FALLBACK_AUDIO) {
         console.log('Trying fallback audio...');
         Alert.alert(
           'Audio Unavailable',
-          'Story audio is not available. Playing sample audio instead.',
+          `Unable to play story audio. Error: ${errorMessage}. Playing sample audio instead.`,
           [{ text: 'OK' }]
         );
-        setTimeout(() => {
-          startNativePlayback(FALLBACK_AUDIO);
-        }, 500);
+        await startNativePlayback(FALLBACK_AUDIO);
       } else {
         Alert.alert(
           'Playback Error',
           `Unable to play audio. Please check:
 • Internet connection
 • Story was generated successfully
+• Backend is running
 
 Error: ${errorMessage}`,
           [{ text: 'OK' }]
         );
-        setIsPlaying(false);
       }
     }
   };
