@@ -79,7 +79,7 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!story) return;
-    const src = FALLBACK_AUDIO;
+    const src = story.audioUrl && story.audioUrl.trim() ? story.audioUrl : FALLBACK_AUDIO;
     // Use web HTMLAudioElement, avoid name clash with expo-av Audio
     const el = typeof window !== 'undefined' && typeof (window as any).Audio === 'function' ? new (window as any).Audio(src) as HTMLAudioElement : null;
     if (!el) return;
@@ -143,7 +143,7 @@ export default function PlayerScreen() {
 
   const handlePlayPause = async () => {
     if (!story) return;
-    const uri = FALLBACK_AUDIO;
+    const uri = story.audioUrl && story.audioUrl.trim() ? story.audioUrl : FALLBACK_AUDIO;
 
     if (Platform.OS === 'web') {
       const el = htmlAudioRef.current;
