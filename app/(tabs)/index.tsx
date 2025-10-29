@@ -1,17 +1,20 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, Redirect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles, Plus } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
+
 import colors from '@/constants/colors';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import VoiceCard from '@/components/VoiceCard';
 import StoryCard from '@/components/StoryCard';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { hasCompletedOnboarding, isLoading: onboardingLoading } = useOnboarding();
   const { family, voices, getLastStory, getVoiceById, isLoading } = useFamily();
   const lastStory = getLastStory();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,6 +37,20 @@ export default function HomeScreen() {
       ]).start();
     }
   }, [isLoading, fadeAnim, scaleAnim]);
+
+  if (onboardingLoading) {
+    return (
+      <View style={styles.background}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (hasCompletedOnboarding === false) {
+    return <Redirect href="/onboarding" />;
+  }
 
   if (isLoading) {
     return (

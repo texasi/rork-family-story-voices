@@ -3,9 +3,11 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/contexts/FamilyContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -16,6 +18,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="new-story" options={{ presentation: "modal" }} />
       <Stack.Screen name="player/[id]" options={{ presentation: "card" }} />
@@ -23,6 +26,8 @@ function RootLayoutNav() {
       <Stack.Screen name="consent" options={{ presentation: "modal" }} />
       <Stack.Screen name="auth" options={{ presentation: "modal" }} />
       <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+      <Stack.Screen name="privacy" options={{ presentation: "modal" }} />
+      <Stack.Screen name="terms" options={{ presentation: "modal" }} />
     </Stack>
   );
 }
@@ -33,18 +38,22 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <FamilyProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </FamilyProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <ErrorBoundary>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <OnboardingProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <FamilyProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </FamilyProvider>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </OnboardingProvider>
+        </QueryClientProvider>
+      </trpc.Provider>
+    </ErrorBoundary>
   );
 }

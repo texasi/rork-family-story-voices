@@ -150,6 +150,24 @@ export default function SettingsScreen() {
                 disclosure that it&apos;s AI-generated.
               </Text>
             </View>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => router.push('/privacy')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.linkButtonText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => router.push('/terms')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.linkButtonText}>Terms of Service</Text>
+            </TouchableOpacity>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Version</Text>
+              <Text style={styles.cardValue}>1.0.0</Text>
+            </View>
           </View>
       </ScrollView>
     </View>
@@ -260,5 +278,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: colors.error,
+  },
+  linkButton: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  linkButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.accent,
   },
 });
