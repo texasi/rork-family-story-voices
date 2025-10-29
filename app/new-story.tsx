@@ -17,6 +17,7 @@ import { STORY_TEMPLATES } from '@/constants/templates';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Story } from '@/types';
+import { trpc } from '@/lib/trpc';
 
 export default function NewStoryScreen() {
   const router = useRouter();
@@ -36,6 +37,8 @@ export default function NewStoryScreen() {
 
   const template = STORY_TEMPLATES.find((t) => t.id === selectedTemplate);
 
+  const generateAudioMutation = trpc.stories.generateAudio.useMutation();
+
   const handleGenerate = async () => {
     if (!selectedTemplate || !selectedVoice || !childName) {
       Alert.alert('Missing Information', 'Please fill in all required fields');
@@ -49,7 +52,22 @@ export default function NewStoryScreen() {
 
     setIsGenerating(true);
 
-    setTimeout(async () => {
+    try {
+      const storyText = `Once upon a time, there was a child named ${childName}${petName ? ` who had a pet named ${petName}` : ''}. This is a ${selectedTheme} story about ${template?.title.toLowerCase()}. The story is about ${length} minutes long.`;
+
+      console.log('Generating audio for story:', storyText);
+      
+      const audioResult = await generateAudioMutation.mutateAsync({
+        text: storyText,
+        voiceId: selectedVoice,
+      });
+
+      if (!audioResult.success || !audioResult.audioUrl) {
+        throw new Error(audioResult.error || 'Failed to generate audio');
+      }
+
+      console.log('Audio generated successfully:', audioResult.audioUrl);
+
       const newStory: Story = {
         id: `story_${Date.now()}`,
         familyId: family?.id || '',
@@ -62,8 +80,8 @@ export default function NewStoryScreen() {
           theme: selectedTheme,
           length,
         },
-        audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav',
-        durationSec: length * 60,
+        audioUrl: audioResult.audioUrl,
+        durationSec: audioResult.durationSec || length * 60,
         createdBy: 'user_1',
         createdAt: new Date().toISOString(),
       };
@@ -113,7 +131,19 @@ export default function NewStoryScreen() {
           },
         ]
       );
-    }, 2000);
+    } catch (error) {
+      console.error('Error generating story:', error);
+      setIsGenerating(false);
+      Alert.alert(
+        'Error',
+        'Failed to generate story. Please check your internet connection and try again.',
+        [
+          {
+            text: 'OK',
+          },
+        ]
+      );
+    }
   };
 
   if (readyVoices.length === 0) {

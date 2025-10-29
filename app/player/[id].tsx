@@ -107,6 +107,11 @@ export default function PlayerScreen() {
   const startNativePlayback = async (uri: string) => {
     try {
       console.log('Attempting to play audio from:', uri);
+      
+      if (!uri || uri.trim() === '') {
+        throw new Error('Audio URL is empty');
+      }
+
       await ExpoAudio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
@@ -130,13 +135,30 @@ export default function PlayerScreen() {
       );
       setSound(newSound);
       setIsPlaying(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error playing audio:', err);
+      console.error('Audio URL:', uri);
+      const errorMessage = err?.message || String(err);
+      
       if (uri !== FALLBACK_AUDIO) {
         console.log('Trying fallback audio...');
+        Alert.alert(
+          'Audio Unavailable',
+          `Unable to play story audio. Error: ${errorMessage}. Playing sample audio instead.`,
+          [{ text: 'OK' }]
+        );
         await startNativePlayback(FALLBACK_AUDIO);
       } else {
-        Alert.alert('Playback Error', 'Unable to play audio. Please check your internet connection.');
+        Alert.alert(
+          'Playback Error',
+          `Unable to play audio. Please check:
+• Internet connection
+• Story was generated successfully
+• Backend is running
+
+Error: ${errorMessage}`,
+          [{ text: 'OK' }]
+        );
       }
     }
   };
