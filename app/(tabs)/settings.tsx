@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Users, UserPlus, Info } from 'lucide-react-native';
+import { Users, UserPlus, Info, Plus } from 'lucide-react-native';
 import colors from '@/constants/colors';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,12 +66,28 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Children</Text>
-              {family?.children.map((child, index) => (
-                <Text key={index} style={styles.cardValue}>
-                  {child.firstName}
+              {family?.children && family.children.length > 0 ? (
+                family.children.map((child, index) => (
+                  <Text key={index} style={styles.cardValue}>
+                    {child.firstName}
+                    {child.dob && ` (${child.dob})`}
+                  </Text>
+                ))
+              ) : (
+                <Text style={[styles.cardValue, { color: colors.textMuted }]}>
+                  No children added yet
                 </Text>
-              ))}
+              )}
             </View>
+            <TouchableOpacity
+              testID="add-child-button"
+              style={styles.addChildButton}
+              onPress={() => router.push('/add-child')}
+              activeOpacity={0.7}
+            >
+              <Plus size={20} color={colors.accent} />
+              <Text style={styles.addChildButtonText}>Add a Child</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -287,6 +303,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   linkButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.accent,
+  },
+  addChildButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.surfaceLight,
+    borderStyle: 'dashed' as const,
+  },
+  addChildButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: colors.accent,
